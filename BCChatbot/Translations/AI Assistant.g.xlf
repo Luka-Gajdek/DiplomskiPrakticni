@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 xliff-core-1.2-transitional.xsd">
+  <file datatype="xml" source-language="en-US" target-language="en-US" original="AI Assistant">
+    <body>
+      <group id="body">
+        <trans-unit id="Table 79149757 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>AI Assistant Setup</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Assistant Setup - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 79149757 - Field 4253087169 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>API Key</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Assistant Setup - Field API Key - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 79149757 - Field 2390560553 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Backend URL</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Assistant Setup - Field Backend URL - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 79149757 - Field 1663593181 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Primary Key</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Assistant Setup - Field Primary Key - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 79149757 - Field 3744088625 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Vacation Entitlement Days</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Assistant Setup - Field Vacation Entitlement Days - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 2816480922 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>AI Assistant</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Chat UI - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 2816480922 - Action 4072480921 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Clear all messages and start a new conversation.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Chat UI - Action ClearChat - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 2816480922 - Action 4072480921 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Clear Chat</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Chat UI - Action ClearChat - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79149757 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>AI Assistant Setup</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Setup - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79149757 - Control 2445482498 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Connection</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Setup - Control General - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79149757 - Control 4253087169 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>The static API key configured in the FastAPI .env file.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Setup - Control API Key - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79149757 - Control 2390560553 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>The ngrok (or local) URL of the FastAPI backend, e.g. https://xxxx.ngrok-free.app</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Setup - Control Backend URL - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79149757 - Control 2905005406 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>HR Settings</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Setup - Control HR - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79149757 - Control 3744088625 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Default number of vacation days per year per employee.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Setup - Control Vacation Entitlement Days - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79149757 - Action 4263468516 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Send a health-check request to the FastAPI backend.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Setup - Action TestConnection - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79149757 - Action 4263468516 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Test Connection</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Setup - Action TestConnection - Property Caption</note>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>

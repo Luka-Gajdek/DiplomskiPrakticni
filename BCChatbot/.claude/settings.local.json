@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find c:UsersLuka.GajdekDesktopClaudeCodeBCChatbot -type f \\\\\\(-name *.py -o -name *.pyx \\\\\\))",
+      "Bash(grep -rn \"predict\\\\|sales\\\\|forecast\\\\|period\" c:UsersLuka.GajdekDesktopClaudeCodeBCChatbot --include=*.al --include=*.js --include=*.css)"
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "serverInstance": "BC",
+      "authentication": "AAD",
+      "breakOnRecordWrite": "None",
+      "name": "Microsoft cloud sandbox",
+      "request": "launch",
+      "type": "al",
+      "environmentType": "Sandbox",
+      "environmentName": "SandboxDemoHRDev",
+      "startupObjectId": 22,
+      "startupObjectType": "Page",
+      "breakOnError": "All",
+      "launchBrowser": true,
+      "tenant": "c886ab44-3feb-480a-9a54-013aa138289a",
+      "enableLongRunningSqlStatements": true,
+      "enableSqlInformationDebugger": true
+    }
+  ]
+}

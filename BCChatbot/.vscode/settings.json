@@ -1,0 +1,7 @@
+{
+  "al.enableCodeAnalysis": true,
+  "al.backgroundCodeAnalysis": true,
+  "al.packageCachePath": ".alpackages",
+  "al.enableCodeActions": true,
+  "editor.formatOnSave": true
+}

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pip show fastapi)",
+      "Bash(where python:*)",
+      "Bash(python -c \"import sys; print\\(sys.executable\\)\")",
+      "Bash(\"C:/Users/Luka.Gajdek/AppData/Local/Python/bin/python.exe\" -m pip show fastapi)",
+      "Bash(\"C:/Users/Luka.Gajdek/AppData/Local/Python/pythoncore-3.14-64/python.exe\" -m pip show fastapi)",
+      "Bash(\"C:\\\\Users\\\\Luka.Gajdek\\\\AppData\\\\Local\\\\Python\\\\pythoncore-3.14-64\\\\python.exe\" -m pip show fastapi)",
+      "Bash(find /c/Users/Luka.Gajdek/Desktop/ClaudeCode -type f \\\\\\(-name *.al -o -name *.py -o -name *.js -o -name *.css -o -name *.json \\\\\\) ! -path */venv/* ! -path */.alpackages/* ! -path */__pycache__/* ! -path */.snapshots/*)",
+      "Bash(find C:UsersLuka.GajdekDesktopClaudeCodeBCChatbot -name *.al -type f)",
+      "Bash(find c:UsersLuka.GajdekDesktopClaudeCodeBCChatbot -name *.al)",
+      "Bash(c:UsersLuka.GajdekDesktopClaudeCodebackendvenvScriptspip.exe install:*)",
+      "Bash(cmd.exe /c \"c:\\\\Users\\\\Luka.Gajdek\\\\Desktop\\\\ClaudeCode\\\\backend\\\\venv\\\\Scripts\\\\pip.exe install xgboost\")",
+      "Bash(rm -rf \"/c/VS/ClaudeCode/AiAssistant\")",
+      "Bash(rm \"/c/VS/ClaudeCode/app.json\")",
+      "Bash(rm -rf \"/c/VS/ClaudeCode/.vscode\")",
+      "Bash(rm \"/c/VS/ClaudeCode/BCChatbot/.vscode/rad.json\")",
+      "Bash(rm \"/c/VS/ClaudeCode/BCChatbot/LG_AI Assistant_1.0.0.0.app\")",
+      "Bash(rm \"/c/VS/ClaudeCode/BCChatbot/Translations/AI Assistant.g.xlf\")",
+      "Bash(rmdir \"/c/VS/ClaudeCode/BCChatbot/Translations\")"
+    ]
+  }
+}
