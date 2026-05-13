@@ -36,7 +36,7 @@ page 50105 "AI Assistant Chat UI"
                     if TrimmedMsg = '' then
                         exit;
 
-                    // Typing indicator is already shown by JS; just fetch the reply.
+                    //fetch the reply.
                     Reply := Mgt.SendMessage(TrimmedMsg, ChatHistory);
                     CurrPage.ChatAddin.AddMessage('AI Assistant', Reply, false);
                 end;
