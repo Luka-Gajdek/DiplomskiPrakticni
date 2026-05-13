@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# Model cache
+models_cache/
+
+# Claude Code
+.claude/

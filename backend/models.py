@@ -1,10 +1,16 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
+
+
+class HistoryMessage(BaseModel):
+    role: str   # "user" or "assistant"
+    content: str
 
 
 class ChatRequest(BaseModel):
     message: str
     context: str = ""
+    history: List[HistoryMessage] = []
 
 
 class ChatResponse(BaseModel):
@@ -14,7 +20,6 @@ class ChatResponse(BaseModel):
 class SalesRecord(BaseModel):
     date: str        # ISO format: YYYY-MM-DD
     quantity: float
-    amount: float
 
 
 class PredictRequest(BaseModel):
@@ -26,12 +31,7 @@ class PredictRequest(BaseModel):
 class PredictResponse(BaseModel):
     item_no: str
     predicted_quantity: float
-    predicted_amount: float
     forecast_period: str
-
-
-class ErrorResponse(BaseModel):
-    error: str
 
 
 class PaymentRecord(BaseModel):
@@ -73,9 +73,11 @@ class LatePaymentResponse(BaseModel):
 
 class IntentRequest(BaseModel):
     message: str
+    history: List[HistoryMessage] = []
 
 
 class IntentResponse(BaseModel):
     intent: str   # "predict_sales" | "item_info" | "vacation" | "customer" | "chat"
     parameter: str = ""
     days: int = 30
+    year: int = 0

@@ -7,7 +7,8 @@ import xgboost as xgb
 
 warnings.filterwarnings("ignore")
 
-MIN_DATA_POINTS = 14
+# lowered because the demo DB doesn't have many sales records
+MIN_DATA_POINTS = 3
 FORECAST_HORIZON = 30  # days
 
 FEATURE_COLS = [
@@ -16,16 +17,16 @@ FEATURE_COLS = [
     "rolling_mean_7", "rolling_mean_14", "rolling_mean_30",
 ]
 
-
+# Removing dates with 0 sales
 def _prepare_dataframe(history: List[Dict]) -> pd.DataFrame:
     df = pd.DataFrame(history)
     df["date"] = pd.to_datetime(df["date"])
-    df = df.groupby("date", as_index=False).agg({"quantity": "sum", "amount": "sum"})
+    df = df.groupby("date", as_index=False).agg({"quantity": "sum"})
     df = df.sort_values("date").reset_index(drop=True)
 
     date_range = pd.date_range(start=df["date"].min(), end=df["date"].max(), freq="D")
     df = df.set_index("date").reindex(date_range, fill_value=0).reset_index()
-    df.columns = ["date", "quantity", "amount"]
+    df.columns = ["date", "quantity"]
     return df
 
 
@@ -69,7 +70,7 @@ def predict(item_no: str, history: List[Dict], days: int = FORECAST_HORIZON) -> 
     )
     model.fit(X_train, y_train)
 
-    # Recursive forecast: each predicted value feeds into the next step as a lag feature
+    # each predicted day feeds back as a lag feature for the next one
     recent_qty = df["quantity"].tolist()
     last_date = df["date"].max()
 
@@ -101,18 +102,11 @@ def predict(item_no: str, history: List[Dict], days: int = FORECAST_HORIZON) -> 
 
     predicted_quantity = float(np.sum(forecast))
 
-    total_qty = df["quantity"].sum()
-    total_amt = df["amount"].sum()
-    avg_price = (total_amt / total_qty) if total_qty > 0 else 0.0
-    predicted_amount = predicted_quantity * avg_price
-
     start_date = last_date + timedelta(days=1)
     end_date = start_date + timedelta(days=days - 1)
 
     return {
         "item_no": item_no,
         "predicted_quantity": round(predicted_quantity, 2),
-        "predicted_amount": round(predicted_amount, 2),
-        "forecast_days": days,
         "forecast_period": f"{start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}",
     }

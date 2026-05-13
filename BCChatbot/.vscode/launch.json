@@ -2,19 +2,18 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "serverInstance": "BC",
-      "authentication": "AAD",
-      "breakOnRecordWrite": "None",
-      "name": "Microsoft cloud sandbox",
+      "name": "BCChatbot",
       "request": "launch",
       "type": "al",
-      "environmentType": "Sandbox",
-      "environmentName": "SandboxDemoHRDev",
+      "environmentType": "OnPrem",
+      "server": "http://BCChatbot", // Originalno: "http://bc27dev" (stari container koji više nije u upotrebi)
+      "serverInstance": "BC",
+      "authentication": "UserPassword",
       "startupObjectId": 22,
       "startupObjectType": "Page",
-      "breakOnError": "All",
+      "breakOnError": "ExcludeTry",
+      "breakOnRecordWrite": "None",
       "launchBrowser": true,
-      "tenant": "c886ab44-3feb-480a-9a54-013aa138289a",
       "enableLongRunningSqlStatements": true,
       "enableSqlInformationDebugger": true
     }

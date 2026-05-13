@@ -14,28 +14,34 @@ Classify the user message into exactly one of these intents:
 - vacation        : user asks about vacation days, holidays, absence, leave for an employee
 - customer        : user asks about a customer or client
 - late_payment    : user asks whether an invoice or customer will pay on time, payment risk, late payment prediction
+- show_image      : user wants to see a picture or photo of an item
 - chat            : anything else (greetings, general questions, etc.)
 
 For the parameter, extract ONLY the core identifying value — not surrounding words:
-- For items: extract only the item name or number (e.g. "Berlin Chair", "1900-S"), never phrases like "current stash of Berlin chairs"
+- For items: extract only the item name or number (e.g. "Berlin Chair", "1900-S"), never phrases like "current stash of Berlin chairs" or "the tokyo chair we have"
 - For employees: extract only the person's name
 - For customers: extract only the customer name or number
 
 For predict_sales, also extract the number of forecast days if mentioned (default to 30 if not specified).
+For vacation, also extract the year if mentioned (default to 0 if not specified).
 
 Examples:
-"how long can we expect current stash of berlin chairs to last?" -> {"intent": "stock_duration", "parameter": "berlin chairs", "days": 30}
-"predict sales for item 1900-S for next 60 days" -> {"intent": "predict_sales", "parameter": "1900-S", "days": 60}
-"can you predict sales for 1896-S for next 100 days?" -> {"intent": "predict_sales", "parameter": "1896-S", "days": 100}
-"predict sales for 1900-S" -> {"intent": "predict_sales", "parameter": "1900-S", "days": 30}
-"how much of tokyo chair do we have?" -> {"intent": "item_info", "parameter": "tokyo chair", "days": 30}
-"how many vacation days does John Smith have left?" -> {"intent": "vacation", "parameter": "John Smith", "days": 30}
-"will Adatum Corporation pay their invoices on time?" -> {"intent": "late_payment", "parameter": "Adatum Corporation", "days": 30}
-"what is the payment risk for customer 10000?" -> {"intent": "late_payment", "parameter": "10000", "days": 30}
-"predict late payments" -> {"intent": "late_payment", "parameter": "", "days": 30}
+"how long can we expect current stash of berlin chairs to last?" -> {"intent": "stock_duration", "parameter": "berlin chairs", "days": 30, "year": 0}
+"predict sales for item 1900-S for next 60 days" -> {"intent": "predict_sales", "parameter": "1900-S", "days": 60, "year": 0}
+"can you predict sales for 1896-S for next 100 days?" -> {"intent": "predict_sales", "parameter": "1896-S", "days": 100, "year": 0}
+"predict sales for 1900-S" -> {"intent": "predict_sales", "parameter": "1900-S", "days": 30, "year": 0}
+"how much of tokyo chair do we have?" -> {"intent": "item_info", "parameter": "tokyo chair", "days": 30, "year": 0}
+"how many vacation days does John Smith have left?" -> {"intent": "vacation", "parameter": "John Smith", "days": 30, "year": 0}
+"list all absences for Terry Dodds in 2027" -> {"intent": "vacation", "parameter": "Terry Dodds", "days": 30, "year": 2027}
+"how many sick days did Jane in 2025?" -> {"intent": "vacation", "parameter": "Jane", "days": 30, "year": 2025}
+"will Adatum Corporation pay their invoices on time?" -> {"intent": "late_payment", "parameter": "Adatum Corporation", "days": 30, "year": 0}
+"what is the payment risk for customer 10000?" -> {"intent": "late_payment", "parameter": "10000", "days": 30, "year": 0}
+"predict late payments" -> {"intent": "late_payment", "parameter": "", "days": 30, "year": 0}
+"can you show me a picture of the tokyo chair we have?" -> {"intent": "show_image", "parameter": "tokyo chair", "days": 30, "year": 0}
+"show me a photo of item 1900-S" -> {"intent": "show_image", "parameter": "1900-S", "days": 30, "year": 0}
 
 Respond ONLY with a JSON object, no explanation:
-{"intent": "<intent>", "parameter": "<parameter>", "days": <number>}
+{"intent": "<intent>", "parameter": "<parameter>", "days": <number>, "year": <number>}
 
 User message: """
 
@@ -48,11 +54,21 @@ SYSTEM_PROMPT = (
 )
 
 
-async def detect_intent(message: str) -> dict:
+async def detect_intent(message: str, history: list = None) -> dict:
     """Ask Llama3 to classify the user's intent and extract the key parameter."""
+    prompt = INTENT_PROMPT
+    if history:
+        recent = history[-4:]  # last 2 turns
+        prompt += "Recent conversation:\n"
+        for msg in recent:
+            role_label = "User" if msg.get("role") == "user" else "Assistant"
+            prompt += f"{role_label}: {msg.get('content', '')}\n"
+        prompt += "\nNow classify this message (resolve any references using the conversation above):\n"
+    prompt += message
+
     payload = {
         "model": MODEL_NAME,
-        "prompt": INTENT_PROMPT + message,
+        "prompt": prompt,
         "stream": False,
         "options": {
             "temperature": 0.0,
@@ -76,12 +92,19 @@ async def detect_intent(message: str) -> dict:
     return {"intent": "chat", "parameter": "", "days": 30}
 
 
-async def generate(message: str, context: str = "") -> str:
+async def generate(message: str, context: str = "", history: list = None) -> str:
     """Send a prompt to Ollama and return the response text."""
     prompt_parts = []
 
     if context:
         prompt_parts.append(f"Context data from Business Central:\n{context}\n")
+
+    if history:
+        prompt_parts.append("Previous conversation:")
+        for msg in history:
+            role_label = "User" if msg.get("role") == "user" else "Assistant"
+            prompt_parts.append(f"{role_label}: {msg.get('content', '')}")
+        prompt_parts.append("")
 
     prompt_parts.append(f"User: {message}\nAssistant:")
 

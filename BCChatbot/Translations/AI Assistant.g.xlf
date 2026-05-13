@@ -28,6 +28,36 @@
           <note from="Developer" annotates="general" priority="2"></note>
           <note from="Xliff Generator" annotates="general" priority="3">Table AI Assistant Setup - Field Vacation Entitlement Days - Property Caption</note>
         </trans-unit>
+        <trans-unit id="Table 2250740551 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>AI Data Quality Buffer</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Data Quality Buffer - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 2250740551 - Field 2540326183 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Meets Threshold</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Data Quality Buffer - Field Meets Threshold - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 2250740551 - Field 2961552353 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Name</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Data Quality Buffer - Field Name - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 2250740551 - Field 4200184881 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>No.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Data Quality Buffer - Field No. - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 2250740551 - Field 1712771946 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Record Count</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Data Quality Buffer - Field Record Count - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 2250740551 - Field 176142393 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Min. Required</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table AI Data Quality Buffer - Field Threshold - Property Caption</note>
+        </trans-unit>
         <trans-unit id="Page 2816480922 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
           <source>AI Assistant</source>
           <note from="Developer" annotates="general" priority="2"></note>
@@ -42,6 +72,26 @@
           <source>Clear Chat</source>
           <note from="Developer" annotates="general" priority="2"></note>
           <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Chat UI - Action ClearChat - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 2816480922 - Action 3205737889 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Show which customers have enough invoice history to use with the late payment prediction feature.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Chat UI - Action PaymentDataQuality - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 2816480922 - Action 3205737889 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Late Payment — Data Quality</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Chat UI - Action PaymentDataQuality - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 2816480922 - Action 2327235167 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Show which items have enough sales records to use with the sales prediction feature.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Chat UI - Action SalesDataQuality - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 2816480922 - Action 2327235167 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Sales Prediction — Data Quality</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Chat UI - Action SalesDataQuality - Property Caption</note>
         </trans-unit>
         <trans-unit id="Page 79149757 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
           <source>AI Assistant Setup</source>
@@ -82,6 +132,196 @@
           <source>Test Connection</source>
           <note from="Developer" annotates="general" priority="2"></note>
           <note from="Xliff Generator" annotates="general" priority="3">Page AI Assistant Setup - Action TestConnection - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Late Payment Prediction — Data Quality</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 3677640652 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Customers are sorted by number of closed invoices (last 2 years). Late payment prediction uses all closed invoices as training data and requires at least 5 total.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control InfoLabel - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 289015904 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Whether this customer currently has open invoices to predict.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control HasOpenInvoices - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 289015904 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Has Open Invoices</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control HasOpenInvoices - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 2540326183 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>True if this customer has enough closed invoices to be well represented in the model.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control Meets Threshold - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 2540326183 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>History OK</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control Meets Threshold - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 2961552353 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Customer name.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control Name - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 2961552353 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Customer Name</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control Name - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 4200184881 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Customer number.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control No. - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 4200184881 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Customer No.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control No. - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 1712771946 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Number of closed (paid) invoices in the last 2 years used to train the model.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control Record Count - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 1712771946 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Closed Invoices (2y)</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control Record Count - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 176142393 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Minimum number of closed invoices for the model to be meaningful.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control Threshold - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Control 176142393 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Min. Required</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Control Threshold - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Action 2026913255 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Reload data from customer ledger entries.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Action Refresh - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Action 2026913255 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Refresh</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Action Refresh - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Action 580853590 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Remove filters and show all customers.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Action ShowAll - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Action 580853590 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Show All Customers</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Action ShowAll - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Action 906121802 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Filter to customers that have enough history AND currently have open invoices — best candidates for demo.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Action ShowReadyWithOpen - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 342746953 - Action 906121802 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Show Ready + Open Invoices</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Payment Data Quality - Action ShowReadyWithOpen - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Sales Prediction — Data Quality</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 3677640652 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Items are sorted by number of sales records (last 2 years). Sales prediction requires at least 3 records.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control InfoLabel - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 2540326183 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>True if this item has enough sales records to run the prediction model.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control Meets Threshold - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 2540326183 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>OK for Prediction</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control Meets Threshold - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 2961552353 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Item description.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control Name - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 2961552353 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Description</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control Name - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 4200184881 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Item number.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control No. - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 4200184881 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Item No.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control No. - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 1712771946 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Number of item ledger entries of type Sale in the last 2 years.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control Record Count - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 1712771946 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Sales Records (2y)</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control Record Count - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 176142393 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Minimum number of records required by the prediction model.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control Threshold - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Control 176142393 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Min. Required</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Control Threshold - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Action 2026913255 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Reload data from item ledger entries.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Action Refresh - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Action 2026913255 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Refresh</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Action Refresh - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Action 580853590 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Remove the filter and show all items.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Action ShowAll - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Action 580853590 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Show All Items</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Action ShowAll - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Action 3076962173 - Property 1295455071" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Filter the list to show only items that meet the minimum threshold.</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Action ShowOnlyOk - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Page 79410727 - Action 3076962173 - Property 2879900210" size-unit="char" translate="yes" xml:space="preserve">
+          <source>Show Only Ready Items</source>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Page AI Sales Data Quality - Action ShowOnlyOk - Property Caption</note>
         </trans-unit>
       </group>
     </body>

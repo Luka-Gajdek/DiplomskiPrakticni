@@ -64,9 +64,37 @@ page 50105 "AI Assistant Chat UI"
                     CurrPage.ChatAddin.InitializeGreeting('Chat cleared. How can I help you?');
                 end;
             }
+            action(SalesDataQuality)
+            {
+                Caption = 'Sales Prediction — Data Quality';
+                ApplicationArea = All;
+                Image = ItemStatistics;
+                Promoted = true;
+                PromotedCategory = Process;
+                ToolTip = 'Show which items have enough sales records to use with the sales prediction feature.';
+
+                trigger OnAction()
+                begin
+                    Page.Run(Page::"AI Sales Data Quality");
+                end;
+            }
+            action(PaymentDataQuality)
+            {
+                Caption = 'Late Payment — Data Quality';
+                ApplicationArea = All;
+                Image = CustomerLedger;
+                Promoted = true;
+                PromotedCategory = Process;
+                ToolTip = 'Show which customers have enough invoice history to use with the late payment prediction feature.';
+
+                trigger OnAction()
+                begin
+                    Page.Run(Page::"AI Payment Data Quality");
+                end;
+            }
         }
     }
 
     var
-        ChatHistory: BigText;
+        ChatHistory: JsonArray;
 }

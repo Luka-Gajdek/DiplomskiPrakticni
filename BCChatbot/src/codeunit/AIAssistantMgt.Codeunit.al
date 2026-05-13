@@ -1,6 +1,6 @@
 codeunit 50104 "AI Assistant Mgt."
 {
-    procedure SendMessage(UserMessage: Text; var ChatHistory: BigText): Text
+    procedure SendMessage(UserMessage: Text; var ChatHistory: JsonArray): Text
     var
         Setup: Record "AI Assistant Setup";
         Context: Text;
@@ -8,24 +8,40 @@ codeunit 50104 "AI Assistant Mgt."
         Intent: Text;
         Parameter: Text;
         ForecastDays: Integer;
+        VacationYear: Integer;
         SalesHistoryJson: Text;
+        HistoryJson: Text;
     begin
         Setup := Setup.GetSetup();
         ValidateSetup(Setup);
 
-        // Ask Llama3 to detect the user's intent
-        DetectIntent(UserMessage, Setup, Intent, Parameter, ForecastDays);
+        ChatHistory.WriteTo(HistoryJson);
+        if HistoryJson = '' then
+            HistoryJson := '[]';
 
-        // Fallback: catch company rules questions Llama3 may have missed
+        //LLM detecting intent
+        DetectIntent(UserMessage, Setup, Intent, Parameter, ForecastDays, VacationYear, HistoryJson);
+
+        // llama3 sometimes misses company policy questions, catch them here
         if (Intent = 'chat') and ContainsAny(UserMessage.ToLower(), 'rule,policy,expense,reimburse,compensat,dress code,conduct,working hours,vacation policy,safety,meeting,equipment,password,it policy') then
             Intent := 'company_rules';
 
-        // Fallback: catch stock duration questions before image check
-        if ContainsAny(UserMessage.ToLower(), 'how long,last,run out,stock last,days left,days of stock') then
+        // llama3 confuses vacation/absence with chat sometimes, fix it here
+        // needs to run before the stock_duration check or "how long was X absent" gets caught by stock keywords
+        if (Intent <> 'vacation') and
+           ContainsAny(UserMessage.ToLower(), 'absent,absence,days off,how many days off,how long was,how long were') then
+            Intent := 'vacation';
+
+        // stock duration questions often end up as item_info or chat, fix that here
+        // require "stock"/"inventory" alongside "how long" so vacation questions don't get caught too
+        if ((Intent = 'chat') or (Intent = 'item_info') or (Intent = 'predict_sales')) and
+           (ContainsAny(UserMessage.ToLower(), 'stock last,days left,days of stock,run out') or
+            (ContainsAny(UserMessage.ToLower(), 'how long') and ContainsAny(UserMessage.ToLower(), 'stock,inventory')))
+        then
             Intent := 'stock_duration';
 
-        // Fallback: catch item image/photo requests (Llama3 often classifies these as item_info)
-        if ContainsAny(UserMessage.ToLower(), 'picture,photo,image,show me a') then
+        // llama3 keeps classifying picture requests as item_info, override that here
+        if ((Intent = 'chat') or (Intent = 'item_info')) and ContainsAny(UserMessage.ToLower(), 'picture,photo,image,show me a') then
             Intent := 'show_image';
 
         case Intent of
@@ -36,23 +52,32 @@ codeunit 50104 "AI Assistant Mgt."
                     else begin
                         Parameter := FindItemNo(Parameter);
                         SalesHistoryJson := BuildSalesHistoryJson(Parameter);
-                        Reply := CallPredictSales(UserMessage, Parameter, SalesHistoryJson, ForecastDays, Setup);
+                        Reply := CallPredictSales(UserMessage, Parameter, SalesHistoryJson, ForecastDays, HistoryJson, Setup);
                     end;
                 end;
             'item_info':
                 begin
                     Context := BuildItemContext(Parameter);
-                    Reply := CallChat(UserMessage, Context, Setup);
+                    Reply := CallChat(UserMessage, Context, HistoryJson, Setup);
                 end;
             'vacation':
                 begin
-                    Context := BuildVacationContext(Parameter);
-                    Reply := CallChat(UserMessage, Context, Setup);
+                    // LLM hallucinates on relative year phrases like "last year", just calculate it manually
+                    if ContainsAny(UserMessage.ToLower(), 'last year,prošle godine,lani') then
+                        VacationYear := Date2DMY(WorkDate(), 3) - 1
+                    else if ContainsAny(UserMessage.ToLower(), 'next year,iduće godine,sljedeće godine') then
+                        VacationYear := Date2DMY(WorkDate(), 3) + 1
+                    else if VacationYear = 0 then
+                        VacationYear := ExtractYearFromText(UserMessage);
+                    // if LLM didn't pick up a name, check the last vacation reply in history
+                    if Parameter = '' then
+                        Parameter := ExtractLastVacationEmployee(ChatHistory);
+                    Reply := BuildVacationReply(Parameter, VacationYear);
                 end;
             'customer':
                 begin
                     Context := BuildCustomerContext(UserMessage);
-                    Reply := CallChat(UserMessage, Context, Setup);
+                    Reply := CallChat(UserMessage, Context, HistoryJson, Setup);
                 end;
             'stock_duration':
                 begin
@@ -60,27 +85,47 @@ codeunit 50104 "AI Assistant Mgt."
                         Reply := 'Please specify an item, e.g. "How long will the stock of Tokyo Chair last?"'
                     else begin
                         Context := BuildStockDurationContext(Parameter, Setup);
-                        Reply := CallChat(UserMessage, Context, Setup);
+                        Reply := CallChat(UserMessage, Context, HistoryJson, Setup);
                     end;
                 end;
             'show_image':
                 begin
-                    Reply := BuildItemImageResponse(UserMessage);
+                    Reply := BuildItemImageResponse(Parameter);
                 end;
             'company_rules':
                 begin
                     Context := GetCompanyRulesContext(Setup);
-                    Reply := CallChat(UserMessage, Context, Setup);
+                    Reply := CallChat(UserMessage, Context, HistoryJson, Setup);
                 end;
             'late_payment':
                 begin
-                    Reply := CallLatePaymentPrediction(UserMessage, Parameter, Setup);
+                    Reply := CallLatePaymentPrediction(UserMessage, Parameter, HistoryJson, Setup);
                 end;
             else
-                Reply := CallChat(UserMessage, '', Setup);
+                Reply := CallChat(UserMessage, '', HistoryJson, Setup);
         end;
 
+        AppendHistory(ChatHistory, UserMessage, Reply);
+
         exit(Reply);
+    end;
+
+    local procedure AppendHistory(var ChatHistory: JsonArray; UserMessage: Text; Reply: Text)
+    var
+        UserMsg: JsonObject;
+        AssistantMsg: JsonObject;
+    begin
+        UserMsg.Add('role', 'user');
+        UserMsg.Add('content', UserMessage);
+        ChatHistory.Add(UserMsg);
+
+        AssistantMsg.Add('role', 'assistant');
+        AssistantMsg.Add('content', Reply);
+        ChatHistory.Add(AssistantMsg);
+
+        // trim history, no point sending the whole thing to llama3
+        while ChatHistory.Count > 5 do
+            ChatHistory.RemoveAt(0);
     end;
 
     procedure TestConnection(Setup: Record "AI Assistant Setup")
@@ -91,6 +136,7 @@ codeunit 50104 "AI Assistant Mgt."
     begin
         Url := Setup."Backend URL" + '/health';
         Client.DefaultRequestHeaders().Add('X-API-Key', Setup."API Key");
+        Client.DefaultRequestHeaders().Add('ngrok-skip-browser-warning', 'true'); // needed for ngrok tunnel; was originally hitting http://host.containerhelper.internal:8000 directly
         if Client.Get(Url, Response) then begin
             if Response.IsSuccessStatusCode() then
                 Message('Connection successful! Backend is online.')
@@ -100,7 +146,7 @@ codeunit 50104 "AI Assistant Mgt."
             Error('Could not reach the backend. Check the URL and that FastAPI + ngrok are running.');
     end;
 
-    local procedure DetectIntent(UserMessage: Text; Setup: Record "AI Assistant Setup"; var Intent: Text; var Parameter: Text; var Days: Integer)
+    local procedure DetectIntent(UserMessage: Text; Setup: Record "AI Assistant Setup"; var Intent: Text; var Parameter: Text; var Days: Integer; var Year: Integer; HistoryJson: Text)
     var
         Client: HttpClient;
         RequestMsg: HttpRequestMessage;
@@ -115,8 +161,11 @@ codeunit 50104 "AI Assistant Mgt."
         Intent := 'chat';
         Parameter := '';
         Days := 30;
+        Year := 0;
 
-        Body := '{"message":' + JsonEscapeString(UserMessage) + '}';
+        if HistoryJson = '' then
+            HistoryJson := '[]';
+        Body := '{"message":' + JsonEscapeString(UserMessage) + ',"history":' + HistoryJson + '}';
 
         Content.WriteFrom(Body);
         Content.GetHeaders(Headers);
@@ -127,6 +176,7 @@ codeunit 50104 "AI Assistant Mgt."
         RequestMsg.SetRequestUri(Setup."Backend URL" + '/detect-intent');
         RequestMsg.GetHeaders(Headers);
         Headers.Add('X-API-Key', Setup."API Key");
+        Headers.Add('ngrok-skip-browser-warning', 'true'); // needed for ngrok tunnel; was originally hitting http://host.containerhelper.internal:8000 directly
         RequestMsg.Content := Content;
 
         if not Client.Send(RequestMsg, ResponseMsg) then
@@ -144,10 +194,12 @@ codeunit 50104 "AI Assistant Mgt."
                 Parameter := Token.AsValue().AsText();
             if JsonObj.Get('days', Token) then
                 Days := Token.AsValue().AsInteger();
+            if JsonObj.Get('year', Token) then
+                Year := Token.AsValue().AsInteger();
         end;
     end;
 
-    local procedure CallChat(UserMessage: Text; Context: Text; Setup: Record "AI Assistant Setup"): Text
+    local procedure CallChat(UserMessage: Text; Context: Text; HistoryJson: Text; Setup: Record "AI Assistant Setup"): Text
     var
         Client: HttpClient;
         RequestMsg: HttpRequestMessage;
@@ -159,7 +211,9 @@ codeunit 50104 "AI Assistant Mgt."
         JsonObj: JsonObject;
         ReplyToken: JsonToken;
     begin
-        Body := '{"message":' + JsonEscapeString(UserMessage) + ',"context":' + JsonEscapeString(Context) + '}';
+        if HistoryJson = '' then
+            HistoryJson := '[]';
+        Body := '{"message":' + JsonEscapeString(UserMessage) + ',"context":' + JsonEscapeString(Context) + ',"history":' + HistoryJson + '}';
 
         Content.WriteFrom(Body);
         Content.GetHeaders(Headers);
@@ -170,6 +224,7 @@ codeunit 50104 "AI Assistant Mgt."
         RequestMsg.SetRequestUri(Setup."Backend URL" + '/chat');
         RequestMsg.GetHeaders(Headers);
         Headers.Add('X-API-Key', Setup."API Key");
+        Headers.Add('ngrok-skip-browser-warning', 'true'); // needed for ngrok tunnel; was originally hitting http://host.containerhelper.internal:8000 directly
         RequestMsg.Content := Content;
 
         if not Client.Send(RequestMsg, ResponseMsg) then
@@ -187,7 +242,7 @@ codeunit 50104 "AI Assistant Mgt."
         exit(ResponseText);
     end;
 
-    local procedure CallPredictSales(UserMessage: Text; ItemNo: Text; HistoryJson: Text; ForecastDays: Integer; Setup: Record "AI Assistant Setup"): Text
+    local procedure CallPredictSales(UserMessage: Text; ItemNo: Text; HistoryJson: Text; ForecastDays: Integer; ChatHistoryJson: Text; Setup: Record "AI Assistant Setup"): Text
     var
         Client: HttpClient;
         RequestMsg: HttpRequestMessage;
@@ -213,6 +268,7 @@ codeunit 50104 "AI Assistant Mgt."
         RequestMsg.SetRequestUri(Setup."Backend URL" + '/predict-sales');
         RequestMsg.GetHeaders(Headers);
         Headers.Add('X-API-Key', Setup."API Key");
+        Headers.Add('ngrok-skip-browser-warning', 'true'); // needed for ngrok tunnel; was originally hitting http://host.containerhelper.internal:8000 directly
         RequestMsg.Content := Content;
 
         if not Client.Send(RequestMsg, ResponseMsg) then
@@ -239,13 +295,13 @@ codeunit 50104 "AI Assistant Mgt."
                        ',"forecast_days":' + Format(ForecastDays) +
                        ',"forecast_period":"' + Period + '"}}';
 
-            exit(CallChat(UserMessage, Context, Setup));
+            exit(CallChat(UserMessage, Context, ChatHistoryJson, Setup));
         end;
 
         exit('Could not parse prediction response.');
     end;
 
-    local procedure BuildVacationContext(SearchTerm: Text): Text
+    local procedure BuildVacationReply(SearchTerm: Text; RequestedYear: Integer): Text
     var
         Employee: Record Employee;
         AbsenceReg: Record "Employee Absence";
@@ -256,24 +312,26 @@ codeunit 50104 "AI Assistant Mgt."
         CurrentYear: Integer;
         StartOfYear: Date;
         EndOfYear: Date;
-        ContextBuilder: TextBuilder;
+        ReplyBuilder: TextBuilder;
         NameWords: List of [Text];
         FirstName: Text;
         LastName: Text;
         AbsenceEmployeeNo: Text;
-        PeriodDays: Integer;
-        FirstAbsence: Boolean;
+        PeriodDays: Decimal;
     begin
         Setup := Setup.GetSetup();
         EntitlementDays := Setup."Vacation Entitlement Days";
-        CurrentYear := Date2DMY(Today(), 3);
+        if RequestedYear > 0 then
+            CurrentYear := RequestedYear
+        else
+            CurrentYear := Date2DMY(WorkDate(), 3);
         StartOfYear := DMY2Date(1, 1, CurrentYear);
         EndOfYear := DMY2Date(31, 12, CurrentYear);
 
         SearchTerm := StripLeadingPrepositions(SearchTerm.Trim());
 
         if SearchTerm = '' then
-            exit('{"error":"Please specify an employee name or ID."}');
+            exit('Please specify an employee name or ID.');
 
         // Try exact match by No. first
         if not Employee.Get(SearchTerm) then begin
@@ -293,7 +351,7 @@ codeunit 50104 "AI Assistant Mgt."
                             Employee.Reset();
                             Employee.SetFilter("Last Name", '@*' + LastName + '*');
                             if not Employee.FindFirst() then
-                                exit('{"error":"No employee found matching \"' + SearchTerm + '\"."}');
+                                exit('No employee found matching "' + SearchTerm + '".');
                         end;
                     end;
                 end else begin
@@ -302,86 +360,91 @@ codeunit 50104 "AI Assistant Mgt."
                         Employee.Reset();
                         Employee.SetFilter("Last Name", '@*' + SearchTerm + '*');
                         if not Employee.FindFirst() then
-                            exit('{"error":"No employee found matching \"' + SearchTerm + '\"."}');
+                            exit('No employee found matching "' + SearchTerm + '".');
                     end;
                 end;
             end;
         end;
 
-        // Employee Absence uses initials as Employee No. (e.g. "TD" for Terry Dodds)
-        AbsenceEmployeeNo := CopyStr(Employee."First Name", 1, 1) + CopyStr(Employee."Last Name", 1, 1);
+        AbsenceEmployeeNo := Employee."No.";
 
-        // Build JSON with individual absence periods and calculate days from From Date / To Date
-        ContextBuilder.Append('{"vacation":{"employee_no":"');
-        ContextBuilder.Append(Employee."No.");
-        ContextBuilder.Append('","employee_name":"');
-        ContextBuilder.Append(Employee."First Name" + ' ' + Employee."Last Name");
-        ContextBuilder.Append('","year":');
-        ContextBuilder.Append(Format(CurrentYear));
-        ContextBuilder.Append(',"entitlement_days":');
-        ContextBuilder.Append(Format(EntitlementDays));
-        ContextBuilder.Append(',"absences":[');
+        ReplyBuilder.Append(Employee."First Name" + ' ' + Employee."Last Name");
+        ReplyBuilder.Append(' — Absences in ');
+        ReplyBuilder.Append(Format(CurrentYear));
+        ReplyBuilder.Append('\n\n');
 
         AbsenceReg.Reset();
         AbsenceReg.SetRange("Employee No.", AbsenceEmployeeNo);
-        AbsenceReg.SetFilter("From Date", '>=%1', StartOfYear);
-        AbsenceReg.SetFilter("From Date", '<=%1', EndOfYear);
-        FirstAbsence := true;
+        AbsenceReg.SetRange("From Date", StartOfYear, EndOfYear);
         if AbsenceReg.FindSet() then
             repeat
-                if AbsenceReg."To Date" = 0D then
-                    AbsenceReg."To Date" := AbsenceReg."From Date";
-                PeriodDays := (AbsenceReg."To Date" - AbsenceReg."From Date") + 1;
-                UsedDays += PeriodDays;
+                if AbsenceReg."To Date" <> 0D then
+                    PeriodDays := CountWorkingDays(AbsenceReg."From Date", AbsenceReg."To Date")
+                else begin
+                    case AbsenceReg."Unit of Measure Code" of
+                        'HOUR':
+                            PeriodDays := Round(AbsenceReg.Quantity / 8, 1);
+                        'DAY':
+                            PeriodDays := Round(AbsenceReg.Quantity, 1);
+                        else
+                            PeriodDays := 1;
+                    end;
+                    if PeriodDays <= 0 then
+                        PeriodDays := 1;
+                end;
+                if not (AbsenceReg."Cause of Absence Code" in ['SICK', 'DAYOFF']) then
+                    UsedDays += PeriodDays;
 
-                if not FirstAbsence then
-                    ContextBuilder.Append(',');
-                ContextBuilder.Append('{"from":"');
-                ContextBuilder.Append(Format(AbsenceReg."From Date", 0, '<Year4>-<Month,2>-<Day,2>'));
-                ContextBuilder.Append('","to":"');
-                ContextBuilder.Append(Format(AbsenceReg."To Date", 0, '<Year4>-<Month,2>-<Day,2>'));
-                ContextBuilder.Append('","days":');
-                ContextBuilder.Append(Format(PeriodDays));
-                ContextBuilder.Append('}');
-                FirstAbsence := false;
-            until AbsenceReg.Next() = 0;
+                ReplyBuilder.Append(Format(AbsenceReg."From Date", 0, '<Day,2> <Month Text,3> <Year4>'));
+                if AbsenceReg."To Date" <> 0D then begin
+                    ReplyBuilder.Append(' – ');
+                    ReplyBuilder.Append(Format(AbsenceReg."To Date", 0, '<Day,2> <Month Text,3> <Year4>'));
+                end;
+                ReplyBuilder.Append('   ');
+                ReplyBuilder.Append(AbsenceReg."Cause of Absence Code");
+                ReplyBuilder.Append('   ');
+                ReplyBuilder.Append(Format(PeriodDays, 0, '<Integer>'));
+                if PeriodDays = 1 then
+                    ReplyBuilder.Append(' day')
+                else
+                    ReplyBuilder.Append(' days');
+                ReplyBuilder.Append('\n');
+            until AbsenceReg.Next() = 0
+        else begin
+            ReplyBuilder.Append('No absences recorded.');
+            ReplyBuilder.Append('\n');
+        end;
 
         RemainingDays := EntitlementDays - UsedDays;
 
-        ContextBuilder.Append('],"used_days":');
-        ContextBuilder.Append(Format(UsedDays, 0, '<Integer>'));
-        ContextBuilder.Append(',"remaining_days":');
-        ContextBuilder.Append(Format(RemainingDays, 0, '<Integer>'));
-        ContextBuilder.Append('}}');
+        ReplyBuilder.Append('\nTotal: ');
+        ReplyBuilder.Append(Format(UsedDays, 0, '<Integer>'));
+        ReplyBuilder.Append(' days of vacation used   |   Vacation entitlement remaining:');
+        ReplyBuilder.Append(Format(RemainingDays, 0, '<Integer>'));
+        ReplyBuilder.Append(' of ');
+        ReplyBuilder.Append(Format(EntitlementDays));
+        ReplyBuilder.Append(' days');
 
-        exit(ContextBuilder.ToText());
+        exit(ReplyBuilder.ToText());
     end;
 
     local procedure BuildSalesHistoryJson(ItemNo: Text): Text
     var
         ILE: Record "Item Ledger Entry";
-        VE: Record "Value Entry";
         JsonBuilder: TextBuilder;
         First: Boolean;
         Qty: Decimal;
-        SalesAmt: Decimal;
     begin
         ILE.Reset();
         ILE.SetRange("Item No.", ItemNo);
         ILE.SetRange("Entry Type", ILE."Entry Type"::Sale);
+        ILE.SetFilter("Posting Date", '>=%1', CalcDate('<-2Y>', Today()));
 
         JsonBuilder.Append('[');
         First := true;
         if ILE.FindSet() then
             repeat
                 Qty := Abs(ILE.Quantity);
-                // Get sales amount from Value Entry
-                VE.Reset();
-                VE.SetRange("Item Ledger Entry No.", ILE."Entry No.");
-                VE.SetRange("Entry Type", VE."Entry Type"::"Direct Cost");
-                SalesAmt := 0;
-                if VE.FindFirst() then
-                    SalesAmt := Abs(VE."Sales Amount (Actual)");
 
                 if not First then
                     JsonBuilder.Append(',');
@@ -389,8 +452,6 @@ codeunit 50104 "AI Assistant Mgt."
                 JsonBuilder.Append(Format(ILE."Posting Date", 0, '<Year4>-<Month,2>-<Day,2>'));
                 JsonBuilder.Append('","quantity":');
                 JsonBuilder.Append(Format(Qty, 0, '<Integer>'));
-                JsonBuilder.Append(',"amount":');
-                JsonBuilder.Append(Format(SalesAmt, 0, '<Precision,2><Standard Format,9>'));
                 JsonBuilder.Append('}');
                 First := false;
             until ILE.Next() = 0;
@@ -399,39 +460,40 @@ codeunit 50104 "AI Assistant Mgt."
         exit(JsonBuilder.ToText());
     end;
 
-    local procedure BuildItemContext(UserMessage: Text): Text
+    local procedure BuildItemContext(SearchTerm: Text): Text
     var
         Item: Record Item;
         JsonBuilder: TextBuilder;
-        SearchTerm: Text;
-        First: Boolean;
     begin
-        SearchTerm := ExtractSearchTerm(UserMessage, 'item,stock,inventory');
+        SearchTerm := StripLeadingPrepositions(SearchTerm.Trim());
+
+        if SearchTerm = '' then
+            exit('{"items":[]}');
 
         Item.SetRange(Blocked, false);
-        Item.SetRange(Type, Item.Type::Inventory);
-        if SearchTerm <> '' then
-            Item.SetFilter(Description, BuildWordFilter(SearchTerm));
-        Item.SetAutoCalcFields(Inventory);
+        Item.SetFilter(Description, BuildWordFilter(SearchTerm));
+        if not Item.FindFirst() then begin
+            Item.Reset();
+            Item.SetFilter(Description, BuildWordFilter(SearchTerm.TrimEnd('s')));
+            if not Item.FindFirst() then begin
+                Item.Reset();
+                Item.SetFilter("No.", '@*' + SearchTerm + '*');
+                if not Item.FindFirst() then
+                    exit('{"items":[]}');
+            end;
+        end;
 
-        JsonBuilder.Append('{"items":[');
-        First := true;
-        if Item.FindSet() then
-            repeat
-                if not First then
-                    JsonBuilder.Append(',');
-                JsonBuilder.Append('{"no":"');
-                JsonBuilder.Append(Item."No.");
-                JsonBuilder.Append('","description":"');
-                JsonBuilder.Append(EscapeJson(Item.Description));
-                JsonBuilder.Append('","inventory":');
-                JsonBuilder.Append(Format(Item.Inventory, 0, '<Precision,2><Standard Format,0>'));
-                JsonBuilder.Append(',"unit_price":');
-                JsonBuilder.Append(Format(Item."Unit Price", 0, '<Precision,2><Standard Format,0>'));
-                JsonBuilder.Append('}');
-                First := false;
-            until Item.Next() = 0;
-        JsonBuilder.Append(']}');
+        Item.CalcFields(Inventory);
+
+        JsonBuilder.Append('{"items":[{"no":"');
+        JsonBuilder.Append(Item."No.");
+        JsonBuilder.Append('","description":"');
+        JsonBuilder.Append(EscapeJson(Item.Description));
+        JsonBuilder.Append('","inventory":');
+        JsonBuilder.Append(Format(Item.Inventory, 0, '<Precision,2><Standard Format,0>'));
+        JsonBuilder.Append(',"unit_price":');
+        JsonBuilder.Append(Format(Item."Unit Price", 0, '<Precision,2><Standard Format,0>'));
+        JsonBuilder.Append('}]}');
 
         exit(JsonBuilder.ToText());
     end;
@@ -480,15 +542,11 @@ codeunit 50104 "AI Assistant Mgt."
         exit(JsonBuilder.ToText());
     end;
 
-    local procedure BuildItemImageResponse(UserMessage: Text): Text
+    local procedure BuildItemImageResponse(SearchTerm: Text): Text
     var
         Item: Record Item;
-        SearchTerm: Text;
         PictureBase64: Text;
     begin
-        SearchTerm := ExtractSearchTerm(UserMessage, 'picture,photo,image');
-        if SearchTerm = '' then
-            SearchTerm := ExtractSearchTerm(UserMessage, 'item,product');
         SearchTerm := StripLeadingPrepositions(SearchTerm.Trim());
 
         if SearchTerm = '' then
@@ -498,9 +556,13 @@ codeunit 50104 "AI Assistant Mgt."
         Item.SetFilter(Description, BuildWordFilter(SearchTerm));
         if not Item.FindFirst() then begin
             Item.Reset();
-            Item.SetFilter("No.", '@*' + SearchTerm + '*');
-            if not Item.FindFirst() then
-                exit('Sorry, I couldn''t find an item matching "' + SearchTerm + '".');
+            Item.SetFilter(Description, BuildWordFilter(SearchTerm.TrimEnd('s')));
+            if not Item.FindFirst() then begin
+                Item.Reset();
+                Item.SetFilter("No.", '@*' + SearchTerm + '*');
+                if not Item.FindFirst() then
+                    exit('Sorry, I couldn''t find an item matching "' + SearchTerm + '".');
+            end;
         end;
 
         PictureBase64 := GetItemPictureBase64(Item);
@@ -535,26 +597,6 @@ codeunit 50104 "AI Assistant Mgt."
 
         TenantMedia.Content.CreateInStream(IStream);
         exit('data:' + MimeType + ';base64,' + Base64Convert.ToBase64(IStream));
-    end;
-
-    local procedure ExtractItemNo(UserMessage: Text): Text
-    var
-        Words: List of [Text];
-        Word: Text;
-        PrevWasItemKeyword: Boolean;
-    begin
-        Words := UserMessage.Split(' ');
-        PrevWasItemKeyword := false;
-        foreach Word in Words do begin
-            Word := Word.Trim().ToUpper();
-            if PrevWasItemKeyword and (Word <> '') and (Word <> 'ITEM') and (Word <> 'FOR') then
-                exit(Word);
-            if (Word = 'ITEM') or (Word = 'FOR') then
-                PrevWasItemKeyword := true
-            else
-                PrevWasItemKeyword := false;
-        end;
-        exit('');
     end;
 
     local procedure ExtractSearchTerm(UserMessage: Text; Keywords: Text): Text
@@ -607,9 +649,6 @@ codeunit 50104 "AI Assistant Mgt."
         foreach Word in Words do begin
             Word := Word.Trim();
             if StrLen(Word) > 2 then begin
-                // Strip trailing 's' for basic plural handling (chairs→chair, lamps→lamp)
-                if Word.EndsWith('s') and (StrLen(Word) > 3) then
-                    Word := CopyStr(Word, 1, StrLen(Word) - 1);
                 if Filter <> '' then
                     Filter += '&';
                 Filter += '@*' + Word + '*';
@@ -618,6 +657,47 @@ codeunit 50104 "AI Assistant Mgt."
         if Filter = '' then
             Filter := '@*' + SearchTerm + '*';
         exit(Filter);
+    end;
+
+    local procedure ExtractYearFromText(Value: Text): Integer
+    var
+        i: Integer;
+        Chunk: Text;
+        Year: Integer;
+    begin
+        for i := 1 to StrLen(Value) - 3 do begin
+            Chunk := CopyStr(Value, i, 4);
+            if Evaluate(Year, Chunk) then
+                if (Year >= 2020) and (Year <= 2099) then
+                    exit(Year);
+        end;
+        exit(0);
+    end;
+
+    local procedure ExtractLastVacationEmployee(ChatHistory: JsonArray): Text
+    var
+        i: Integer;
+        Token: JsonToken;
+        MsgObj: JsonObject;
+        Role: Text;
+        Content: Text;
+        DashPos: Integer;
+    begin
+        // go backwards through history, vacation replies always start with "FirstName LastName — Absences in"
+        for i := ChatHistory.Count - 1 downto 0 do begin
+            ChatHistory.Get(i, Token);
+            MsgObj := Token.AsObject();
+            if MsgObj.Get('role', Token) then
+                Role := Token.AsValue().AsText();
+            if Role = 'assistant' then
+                if MsgObj.Get('content', Token) then begin
+                    Content := Token.AsValue().AsText();
+                    DashPos := Content.IndexOf(' — Absences in ');
+                    if DashPos > 0 then
+                        exit(CopyStr(Content, 1, DashPos - 1));
+                end;
+        end;
+        exit('');
     end;
 
     local procedure ContainsAny(Source: Text; Keywords: Text): Boolean
@@ -670,6 +750,7 @@ codeunit 50104 "AI Assistant Mgt."
         RequestMsg.SetRequestUri(Setup."Backend URL" + '/company-rules');
         RequestMsg.GetHeaders(Headers);
         Headers.Add('X-API-Key', Setup."API Key");
+        Headers.Add('ngrok-skip-browser-warning', 'true'); // needed for ngrok tunnel; was originally hitting http://host.containerhelper.internal:8000 directly
 
         if not Client.Send(RequestMsg, ResponseMsg) then
             exit('{"error":"Could not reach backend to load company rules."}');
@@ -701,10 +782,15 @@ codeunit 50104 "AI Assistant Mgt."
         Item.Reset();
         Item.SetRange(Blocked, false);
         Item.SetFilter(Description, BuildWordFilter(SearchTerm));
+        if not Item.FindFirst() then begin
+            Item.Reset();
+            Item.SetRange(Blocked, false);
+            Item.SetFilter(Description, BuildWordFilter(SearchTerm.TrimEnd('s')));
+        end;
         if Item.FindFirst() then
             exit(Item."No.");
 
-        // Return the original value — BuildSalesHistoryJson will handle the empty result
+        // just return whatever was passed, BuildSalesHistoryJson handles not finding anything
         exit(SearchTerm);
     end;
 
@@ -732,9 +818,14 @@ codeunit 50104 "AI Assistant Mgt."
         Item.SetAutoCalcFields(Inventory);
         if not Item.FindFirst() then begin
             Item.Reset();
+            Item.SetFilter(Description, BuildWordFilter(ItemParam.TrimEnd('s')));
             Item.SetAutoCalcFields(Inventory);
-            if not Item.Get(ItemParam) then
-                exit('{"error":"Item not found: ' + ItemParam + '"}');
+            if not Item.FindFirst() then begin
+                Item.Reset();
+                Item.SetAutoCalcFields(Inventory);
+                if not Item.Get(ItemParam) then
+                    exit('{"error":"Item not found: ' + ItemParam + '"}');
+            end;
         end;
 
         HistoryJson := BuildSalesHistoryJson(Item."No.");
@@ -749,6 +840,7 @@ codeunit 50104 "AI Assistant Mgt."
         RequestMsg.SetRequestUri(Setup."Backend URL" + '/predict-sales');
         RequestMsg.GetHeaders(Headers);
         Headers.Add('X-API-Key', Setup."API Key");
+        Headers.Add('ngrok-skip-browser-warning', 'true'); // needed for ngrok tunnel; was originally hitting http://host.containerhelper.internal:8000 directly
         RequestMsg.Content := Content;
 
         if not Client.Send(RequestMsg, ResponseMsg) then
@@ -785,7 +877,7 @@ codeunit 50104 "AI Assistant Mgt."
         );
     end;
 
-    local procedure CallLatePaymentPrediction(UserMessage: Text; CustomerParam: Text; Setup: Record "AI Assistant Setup"): Text
+    local procedure CallLatePaymentPrediction(UserMessage: Text; CustomerParam: Text; ChatHistoryJson: Text; Setup: Record "AI Assistant Setup"): Text
     var
         Client: HttpClient;
         RequestMsg: HttpRequestMessage;
@@ -817,11 +909,11 @@ codeunit 50104 "AI Assistant Mgt."
         CustomerNo := '';
         if CustomerParam <> '' then begin
             CustomerNo := ResolveCustomerNo(CustomerParam);
-            // If we couldn't resolve to a known customer, treat it as a document number
+            // couldn't find a customer with that name, maybe it's a document number
             if not Customer.Get(CustomerNo) then begin
                 TrainingJson := BuildLatePaymentTrainingJson();
                 OpenInvoicesJson := BuildOpenInvoicesJson('', CustomerParam);
-                // skip to call
+                // fall through to the HTTP call below
             end;
         end;
 
@@ -841,6 +933,7 @@ codeunit 50104 "AI Assistant Mgt."
         RequestMsg.SetRequestUri(Setup."Backend URL" + '/predict-late-payment');
         RequestMsg.GetHeaders(Headers);
         Headers.Add('X-API-Key', Setup."API Key");
+        Headers.Add('ngrok-skip-browser-warning', 'true'); // needed for ngrok tunnel; was originally hitting http://host.containerhelper.internal:8000 directly
         RequestMsg.Content := Content;
 
         if not Client.Send(RequestMsg, ResponseMsg) then
@@ -901,7 +994,7 @@ codeunit 50104 "AI Assistant Mgt."
         end;
         ContextBuilder.Append(']}');
 
-        exit(CallChat(UserMessage, ContextBuilder.ToText(), Setup));
+        exit(CallChat(UserMessage, ContextBuilder.ToText(), ChatHistoryJson, Setup));
     end;
 
     local procedure BuildLatePaymentTrainingJson(): Text
@@ -1023,6 +1116,20 @@ codeunit 50104 "AI Assistant Mgt."
             exit(Customer."No.");
 
         exit(SearchTerm);
+    end;
+
+    local procedure CountWorkingDays(FromDate: Date; ToDate: Date): Integer
+    var
+        CurrentDate: Date;
+        Count: Integer;
+    begin
+        CurrentDate := FromDate;
+        while CurrentDate <= ToDate do begin
+            if Date2DWY(CurrentDate, 1) <= 5 then  // Mon=1 .. Fri=5, Sat=6, Sun=7
+                Count += 1;
+            CurrentDate := CurrentDate + 1;
+        end;
+        exit(Count);
     end;
 
     local procedure ValidateSetup(Setup: Record "AI Assistant Setup")

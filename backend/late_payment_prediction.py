@@ -1,4 +1,7 @@
 import warnings
+import hashlib
+import json
+import time
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Any
@@ -7,18 +10,30 @@ from sklearn.preprocessing import LabelEncoder
 
 warnings.filterwarnings("ignore")
 
-MIN_TRAINING_RECORDS = 20
+MIN_TRAINING_RECORDS = 5  # lowered because the demo DB doesn't have many closed invoices
+CACHE_TTL_SECONDS = 1800  # 30 minutes
+
+FEATURE_COLS = [
+    "invoice_amount",
+    "payment_terms_days",
+    "posting_group_enc",
+    "cust_late_rate",
+    "cust_avg_days_late",
+    "cust_invoice_count",
+    "cust_avg_amount",
+    "amount_vs_avg",
+]
+
+_model_cache: Dict[str, Dict[str, Any]] = {}
 
 
-def predict(training_data: List[Dict], invoices_to_predict: List[Dict]) -> Dict[str, Any]:
-    if len(training_data) < MIN_TRAINING_RECORDS:
-        return {"error": f"Insufficient training data: need at least {MIN_TRAINING_RECORDS} closed invoices, got {len(training_data)}."}
+def _hash_training(training_data: List[Dict]) -> str:
+    serialized = json.dumps(training_data, sort_keys=True)
+    return hashlib.sha256(serialized.encode()).hexdigest()
 
-    if not invoices_to_predict:
-        return {"error": "No open invoices to predict."}
 
+def _train_model(training_data: List[Dict]) -> Dict[str, Any]:
     df_train = pd.DataFrame(training_data)
-    df_pred = pd.DataFrame(invoices_to_predict)
 
     # Per-customer historical aggregates used as features
     customer_stats = df_train.groupby("customer_no").agg(
@@ -28,36 +43,19 @@ def predict(training_data: List[Dict], invoices_to_predict: List[Dict]) -> Dict[
         cust_avg_amount=("invoice_amount", "mean"),
     ).reset_index()
 
-    # Encode posting group consistently across train + predict
+    # fit the encoder on training data only; unknown groups on predict side get -1
     le = LabelEncoder()
-    le.fit(pd.concat([df_train["customer_posting_group"], df_pred["customer_posting_group"]]).unique())
+    le.fit(df_train["customer_posting_group"])
     df_train["posting_group_enc"] = le.transform(df_train["customer_posting_group"])
-    df_pred["posting_group_enc"] = le.transform(df_pred["customer_posting_group"])
 
-    df_train = df_train.merge(customer_stats, on="customer_no", how="left")
-    df_pred = df_pred.merge(customer_stats, on="customer_no", how="left")
-
-    # New customers with no history fall back to global averages
-    global_defaults = customer_stats[["cust_late_rate", "cust_avg_days_late", "cust_invoice_count", "cust_avg_amount"]].mean()
-    df_pred = df_pred.fillna(global_defaults)
-    df_train = df_train.fillna(0)
-
-    # Relative invoice size vs customer's typical invoice
+    df_train = df_train.merge(customer_stats, on="customer_no", how="left").fillna(0)
     df_train["amount_vs_avg"] = df_train["invoice_amount"] / (df_train["cust_avg_amount"] + 1)
-    df_pred["amount_vs_avg"] = df_pred["invoice_amount"] / (df_pred["cust_avg_amount"] + 1)
 
-    feature_cols = [
-        "invoice_amount",
-        "payment_terms_days",
-        "posting_group_enc",
-        "cust_late_rate",
-        "cust_avg_days_late",
-        "cust_invoice_count",
-        "cust_avg_amount",
-        "amount_vs_avg",
-    ]
+    global_defaults = customer_stats[
+        ["cust_late_rate", "cust_avg_days_late", "cust_invoice_count", "cust_avg_amount"]
+    ].mean()
 
-    X_train = df_train[feature_cols].values
+    X_train = df_train[FEATURE_COLS].values
     y_train = df_train["was_late"].astype(int).values
 
     model = XGBClassifier(
@@ -72,7 +70,54 @@ def predict(training_data: List[Dict], invoices_to_predict: List[Dict]) -> Dict[
     )
     model.fit(X_train, y_train)
 
-    X_pred = df_pred[feature_cols].values
+    return {
+        "model": model,
+        "customer_stats": customer_stats,
+        "global_defaults": global_defaults,
+        "le_classes": list(le.classes_),
+    }
+
+
+def _get_or_train(training_data: List[Dict]) -> Dict[str, Any]:
+    # clean up old cache entries
+    now = time.time()
+    for k in [k for k, v in _model_cache.items() if now - v["timestamp"] >= CACHE_TTL_SECONDS]:
+        del _model_cache[k]
+
+    cache_key = _hash_training(training_data)
+    cached = _model_cache.get(cache_key)
+    if cached:
+        return cached["artifacts"]
+
+    artifacts = _train_model(training_data)
+    _model_cache[cache_key] = {"artifacts": artifacts, "timestamp": now}
+    return artifacts
+
+
+def predict(training_data: List[Dict], invoices_to_predict: List[Dict]) -> Dict[str, Any]:
+    if len(training_data) < MIN_TRAINING_RECORDS:
+        return {"error": f"Insufficient training data: need at least {MIN_TRAINING_RECORDS} closed invoices, got {len(training_data)}."}
+
+    if not invoices_to_predict:
+        return {"error": "No open invoices to predict."}
+
+    artifacts = _get_or_train(training_data)
+    model = artifacts["model"]
+    customer_stats = artifacts["customer_stats"]
+    global_defaults = artifacts["global_defaults"]
+    le_classes = artifacts["le_classes"]
+
+    df_pred = pd.DataFrame(invoices_to_predict)
+
+    # Map posting groups using cached classes
+    class_to_idx = {c: i for i, c in enumerate(le_classes)}
+    df_pred["posting_group_enc"] = df_pred["customer_posting_group"].map(class_to_idx).fillna(-1).astype(int)
+
+    df_pred = df_pred.merge(customer_stats, on="customer_no", how="left")
+    df_pred = df_pred.fillna(global_defaults)
+    df_pred["amount_vs_avg"] = df_pred["invoice_amount"] / (df_pred["cust_avg_amount"] + 1)
+
+    X_pred = df_pred[FEATURE_COLS].values
     probabilities = model.predict_proba(X_pred)[:, 1]
     predictions = probabilities >= 0.5
 

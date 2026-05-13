@@ -3,7 +3,7 @@ from fastapi import FastAPI, Header, HTTPException, status
 from dotenv import load_dotenv
 
 from models import (
-    ChatRequest, ChatResponse, PredictRequest, PredictResponse, ErrorResponse,
+    ChatRequest, ChatResponse, PredictRequest, PredictResponse,
     IntentRequest, IntentResponse, LatePaymentRequest, LatePaymentResponse,
 )
 import ollama_client
@@ -39,7 +39,8 @@ async def health():
 async def chat(request: ChatRequest, x_api_key: str = Header(default="")):
     _verify_api_key(x_api_key)
     try:
-        reply = await ollama_client.generate(request.message, request.context)
+        history_dicts = [m.model_dump() for m in request.history]
+        reply = await ollama_client.generate(request.message, request.context, history_dicts)
         return ChatResponse(reply=reply)
     except Exception as exc:
         raise HTTPException(
@@ -51,11 +52,13 @@ async def chat(request: ChatRequest, x_api_key: str = Header(default="")):
 @app.post("/detect-intent", response_model=IntentResponse)
 async def detect_intent(request: IntentRequest, x_api_key: str = Header(default="")):
     _verify_api_key(x_api_key)
-    result = await ollama_client.detect_intent(request.message)
+    history_dicts = [m.model_dump() for m in request.history]
+    result = await ollama_client.detect_intent(request.message, history_dicts)
     return IntentResponse(
         intent=result.get("intent", "chat"),
         parameter=result.get("parameter", ""),
         days=result.get("days", 30),
+        year=result.get("year", 0),
     )
 
 
@@ -80,7 +83,7 @@ async def predict_sales(request: PredictRequest, x_api_key: str = Header(default
     result = sales_prediction.predict(request.item_no, history_dicts, days=request.forecast_days)
 
     if "error" in result:
-        return result  # Return error JSON with 200 so BC can parse the message
+        return result  # BC can't handle non-200 responses cleanly, return 200 with error inside
 
     return PredictResponse(**result)
 
