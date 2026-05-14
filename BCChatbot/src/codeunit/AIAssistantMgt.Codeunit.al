@@ -57,8 +57,18 @@ codeunit 50104 "AI Assistant Mgt."
                 end;
             'item_info':
                 begin
-                    Context := BuildItemContext(Parameter);
-                    Reply := CallChat(UserMessage, Context, HistoryJson, Setup);
+                    if Parameter = '' then
+                        Parameter := ExtractLastItemNoFromHistory(ChatHistory);
+
+                    if Parameter = '' then
+                        Reply := 'Please specify an item, e.g. "Show me info about Tokyo chair".'
+                    else begin
+                        Context := BuildItemContext(Parameter);
+                        if Context = '{"items":[]}' then
+                            Reply := BuildItemNotFoundReply(Parameter)
+                        else
+                            Reply := CallChat(UserMessage, Context, HistoryJson, Setup);
+                    end;
                 end;
             'vacation':
                 begin
@@ -90,6 +100,8 @@ codeunit 50104 "AI Assistant Mgt."
                 end;
             'show_image':
                 begin
+                    if Parameter = '' then
+                        Parameter := ExtractLastItemNoFromHistory(ChatHistory);
                     Reply := BuildItemImageResponse(Parameter);
                 end;
             'company_rules':
@@ -120,12 +132,26 @@ codeunit 50104 "AI Assistant Mgt."
         ChatHistory.Add(UserMsg);
 
         AssistantMsg.Add('role', 'assistant');
-        AssistantMsg.Add('content', Reply);
+        AssistantMsg.Add('content', SanitizeHistoryContent(Reply));
         ChatHistory.Add(AssistantMsg);
 
         // trim history, no point sending the whole thing to llama3
         while ChatHistory.Count > 5 do
             ChatHistory.RemoveAt(0);
+    end;
+
+    local procedure SanitizeHistoryContent(Value: Text): Text
+    var
+        ImgPos: Integer;
+    begin
+        ImgPos := Value.IndexOf('[IMG:');
+        if ImgPos > 0 then
+            Value := CopyStr(Value, 1, ImgPos - 1) + '[image omitted]';
+
+        if StrLen(Value) > 700 then
+            Value := CopyStr(Value, 1, 700) + '...';
+
+        exit(Value);
     end;
 
     procedure TestConnection(Setup: Record "AI Assistant Setup")
@@ -498,6 +524,90 @@ codeunit 50104 "AI Assistant Mgt."
         exit(JsonBuilder.ToText());
     end;
 
+    local procedure BuildItemNotFoundReply(SearchTerm: Text): Text
+    var
+        Item: Record Item;
+        SuggestionBuilder: TextBuilder;
+        Count: Integer;
+        Found: Boolean;
+    begin
+        SearchTerm := StripLeadingPrepositions(SearchTerm.Trim());
+
+        if SearchTerm = '' then
+            exit('Sorry, I couldn''t find that item. Try item number or exact item name.');
+
+        Item.SetRange(Blocked, false);
+        Item.SetFilter(Description, BuildWordFilter(SearchTerm));
+        Found := Item.FindSet();
+
+        if not Found then begin
+            Item.Reset();
+            Item.SetRange(Blocked, false);
+            Item.SetFilter(Description, '@*' + SearchTerm + '*');
+            Found := Item.FindSet();
+        end;
+
+        if not Found then begin
+            Item.Reset();
+            Item.SetRange(Blocked, false);
+            Item.SetFilter("No.", '@*' + SearchTerm + '*');
+            Found := Item.FindSet();
+        end;
+
+        if not Found then
+            exit('Sorry, I couldn''t find an item matching "' + SearchTerm + '". Try item number or exact item name.');
+
+        repeat
+            if Count < 3 then begin
+                if Count > 0 then
+                    SuggestionBuilder.Append('; ');
+                SuggestionBuilder.Append(Item.Description + ' (No. ' + Item."No." + ')');
+                Count += 1;
+            end;
+        until (Item.Next() = 0) or (Count >= 3);
+
+        if Count = 1 then
+            exit('Sorry, I couldn''t find an exact match for "' + SearchTerm + '". Did you mean ' + SuggestionBuilder.ToText() + '?');
+
+        exit('Sorry, I couldn''t find an exact match for "' + SearchTerm + '". Did you mean: ' + SuggestionBuilder.ToText() + '?');
+    end;
+
+    local procedure BuildItemInfoReply(SearchTerm: Text): Text
+    var
+        Item: Record Item;
+        InventoryText: Text;
+        UnitPriceText: Text;
+    begin
+        SearchTerm := StripLeadingPrepositions(SearchTerm.Trim());
+
+        if SearchTerm = '' then
+            exit('Please specify an item, e.g. "Show me info about Tokyo chair".');
+
+        Item.SetRange(Blocked, false);
+        Item.SetFilter(Description, BuildWordFilter(SearchTerm));
+        if not Item.FindFirst() then begin
+            Item.Reset();
+            Item.SetRange(Blocked, false);
+            Item.SetFilter(Description, BuildWordFilter(SearchTerm.TrimEnd('s')));
+            if not Item.FindFirst() then begin
+                Item.Reset();
+                Item.SetRange(Blocked, false);
+                Item.SetFilter("No.", '@*' + SearchTerm + '*');
+                if not Item.FindFirst() then
+                    exit(BuildItemNotFoundReply(SearchTerm));
+            end;
+        end;
+
+        Item.CalcFields(Inventory);
+        InventoryText := Format(Item.Inventory, 0, '<Precision,2><Standard Format,0>');
+        UnitPriceText := Format(Item."Unit Price", 0, '<Precision,2><Standard Format,0>');
+
+        exit(
+            'Item ' + Item.Description + ' (No. ' + Item."No." + ') currently has ' + InventoryText +
+            ' units in stock. Unit price is ' + UnitPriceText + '.'
+        );
+    end;
+
     local procedure BuildCustomerContext(UserMessage: Text): Text
     var
         Customer: Record Customer;
@@ -775,8 +885,9 @@ codeunit 50104 "AI Assistant Mgt."
         SearchTerm := StripLeadingPrepositions(SearchTerm.Trim());
 
         // Try exact item number first
-        if Item.Get(SearchTerm) then
-            exit(Item."No.");
+        if StrLen(SearchTerm) <= MaxStrLen(Item."No.") then
+            if Item.Get(SearchTerm) then
+                exit(Item."No.");
 
         // Try description match
         Item.Reset();
@@ -792,6 +903,52 @@ codeunit 50104 "AI Assistant Mgt."
 
         // just return whatever was passed, BuildSalesHistoryJson handles not finding anything
         exit(SearchTerm);
+    end;
+
+    local procedure ExtractLastItemNoFromHistory(ChatHistory: JsonArray): Text
+    var
+        i: Integer;
+        Token: JsonToken;
+        MsgObj: JsonObject;
+        Role: Text;
+        Content: Text;
+        ItemNo: Text;
+    begin
+        for i := ChatHistory.Count - 1 downto 0 do begin
+            ChatHistory.Get(i, Token);
+            MsgObj := Token.AsObject();
+
+            Role := '';
+            if MsgObj.Get('role', Token) then
+                Role := Token.AsValue().AsText();
+
+            if (Role = 'user') or (Role = 'assistant') then
+                if MsgObj.Get('content', Token) then begin
+                    Content := Token.AsValue().AsText();
+                    ItemNo := FindItemNoMentionInText(Content);
+                    if ItemNo <> '' then
+                        exit(ItemNo);
+                end;
+        end;
+
+        exit('');
+    end;
+
+    local procedure FindItemNoMentionInText(Value: Text): Text
+    var
+        Item: Record Item;
+        LowerValue: Text;
+    begin
+        LowerValue := Value.ToLower();
+
+        Item.SetRange(Blocked, false);
+        if Item.FindSet() then
+            repeat
+                if (Item.Description <> '') and LowerValue.Contains(Item.Description.ToLower()) then
+                    exit(Item."No.");
+            until Item.Next() = 0;
+
+        exit('');
     end;
 
     local procedure BuildStockDurationContext(ItemParam: Text; Setup: Record "AI Assistant Setup"): Text
@@ -823,7 +980,9 @@ codeunit 50104 "AI Assistant Mgt."
             if not Item.FindFirst() then begin
                 Item.Reset();
                 Item.SetAutoCalcFields(Inventory);
-                if not Item.Get(ItemParam) then
+                if (StrLen(ItemParam) <= MaxStrLen(Item."No.")) and Item.Get(ItemParam) then begin
+                    // found exact item number
+                end else
                     exit('{"error":"Item not found: ' + ItemParam + '"}');
             end;
         end;

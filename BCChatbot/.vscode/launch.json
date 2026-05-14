@@ -6,9 +6,10 @@
       "request": "launch",
       "type": "al",
       "environmentType": "OnPrem",
-      "server": "http://BCChatbot", // Originalno: "http://bc27dev" (stari container koji više nije u upotrebi)
+      "server": "http://172.29.7.111", // BCChatbot hosts alias trenutno pokazuje na stari subnet (172.23.*)
       "serverInstance": "BC",
       "authentication": "UserPassword",
+      "usePublicURLFromServer": false,
       "startupObjectId": 22,
       "startupObjectType": "Page",
       "breakOnError": "ExcludeTry",
